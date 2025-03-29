@@ -1,5 +1,9 @@
 import Anthropic from "npm:@anthropic-ai/sdk";
+import { parseArgs } from "jsr:@std/cli/parse-args";
 // import { writeFile } from "node:fs/promises";
+
+const args = parseArgs(Deno.args);
+console.log("args", args);
 
 const anthropic = new Anthropic();
 
