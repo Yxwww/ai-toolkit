@@ -1,4 +1,6 @@
 import Anthropic from "npm:@anthropic-ai/sdk";
+// import { writeFile } from "node:fs/promises";
+
 const anthropic = new Anthropic();
 
 // Read PR template from .github directory
@@ -9,7 +11,8 @@ async function main() {
     model: "claude-3-7-sonnet-20250219",
     max_tokens: 1000,
     temperature: 1,
-    system: "Responds with concisely written pull request descriptions.",
+    system:
+      "Responds with concisely written pull request descriptions following the template",
     messages: [
       {
         role: "user",
@@ -29,6 +32,13 @@ async function main() {
       },
     ],
   });
+
+  const block = msg.content[0];
+  if (block.type === "text") {
+    Deno.writeFile("pr-description.md", textEncoder.encode(block.text));
+  } else {
+    console.error("Unexpected message type:", block.type);
+  }
 }
 
 const readPrTemplate = async () => {
@@ -74,6 +84,8 @@ const readPrTemplate = async () => {
   return "";
 };
 
+const textDecoder = new TextDecoder();
+const textEncoder = new TextEncoder();
 const getLatestCommitMessage = async () => {
   try {
     const process = new Deno.Command("git", {
@@ -83,8 +95,9 @@ const getLatestCommitMessage = async () => {
     });
 
     const output = await process.output();
+    const result = textDecoder.decode(output.stdout).trim();
 
-    return outpu;
+    return result;
   } catch (error) {
     console.error("Error reading latest commit message:", error);
     return "";
@@ -93,16 +106,16 @@ const getLatestCommitMessage = async () => {
 
 const getDiffSummary = async () => {
   try {
+    // Get the diff between HEAD and the previous commit to show the latest changes
     const process = new Deno.Command("git", {
-      args: ["diff", "--staged", "--stat"],
+      args: ["diff", "HEAD^", "HEAD", "--stat"],
       stdout: "piped",
       stderr: "piped",
     });
 
     const output = await process.output();
-    console.log("output");
-    const diffSummary = new TextDecoder().decode(output).trim();
-    process.close();
+    const diffSummary = new TextDecoder().decode(output.stdout).trim();
+    console.log("Latest diff summary:", diffSummary);
 
     return diffSummary;
   } catch (error) {
@@ -111,4 +124,37 @@ const getDiffSummary = async () => {
   }
 };
 
-getDiffSummary();
+const readLastCommit = async () => {
+  try {
+    const message = await getLatestCommitMessage();
+    const diffSummary = await getDiffSummary();
+    console.log("message summary", { message, diffSummary });
+
+    // Get the actual code changes from the last commit
+    const process = new Deno.Command("git", {
+      args: ["show", "--pretty=format:", "--patch"],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const output = await process.output();
+    const codeChanges = new TextDecoder().decode(output.stdout).trim();
+
+    const commit = `
+Commit Message:
+${message}
+
+Changes:
+${diffSummary}
+
+Code Changes:
+${codeChanges}
+    `.trim();
+    return commit;
+  } catch (error) {
+    console.error("Error reading last commit:", error);
+    return "";
+  }
+};
+
+main();
