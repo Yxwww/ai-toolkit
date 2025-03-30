@@ -18,6 +18,10 @@ export function _mockAnthropic(mockClient: unknown) {
 // Export for testing
 export async function main() {
   const template = await readPrTemplate();
+  const lastCommit = await readLastCommit();
+  if (lastCommit.length > 2000) {
+    throw new Error("Commit message is too long");
+  }
   const msg = await anthropic.messages.create({
     model: "claude-3-7-sonnet-20250219",
     max_tokens: 1000,
@@ -34,7 +38,7 @@ export async function main() {
               `Please write a pull request description based on the commit using the pull request template.
 
               Here is the last commit:
-              ${await readLastCommit()}
+              ${}
               Here is the template:
               ${template}
             `,
