@@ -1,11 +1,13 @@
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { parseArgs } from "jsr:@std/cli/parse-args";
+import { readLastCommit, readPrTemplate } from "./utils.ts";
 // import { writeFile } from "node:fs/promises";
 
 const args = parseArgs(Deno.args);
 console.log("args", args);
 
 const anthropic = new Anthropic();
+const textEncoder = new TextEncoder();
 
 // Read PR template from .github directory
 
@@ -39,126 +41,42 @@ async function main() {
 
   const block = msg.content[0];
   if (block.type === "text") {
-    Deno.writeFile("pr-description.md", textEncoder.encode(block.text));
+    console.log(block.text);
+
+    // Check if EDITOR environment variable is set
+    const editor = Deno.env.get("EDITOR");
+
+    if (editor) {
+      // Create a temporary file with the PR description
+      const tempFile = await Deno.makeTempFile({ suffix: ".md" });
+      await Deno.writeFile(tempFile, textEncoder.encode(block.text));
+
+      // Open the file with the user's editor
+      const process = new Deno.Command(editor, {
+        args: [tempFile],
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+
+      const status = await process.output();
+
+      // Read the potentially edited content back
+      // const editedContent = await Deno.readFile(tempFile);
+      // await Deno.writeFile("pr-description.md", editedContent);
+
+      // Clean up the temp file
+      await Deno.remove(tempFile);
+    } else {
+      // Fall back to direct file writing if no editor is set
+      Deno.writeFile(
+        "genearted-pr-description.md",
+        textEncoder.encode(block.text),
+      );
+    }
   } else {
     console.error("Unexpected message type:", block.type);
   }
 }
-
-const readPrTemplate = async () => {
-  try {
-    // First try to read from .github/pull_request_template.md
-    const prTemplatePath = ".github/pull_request_template.md";
-    let prTemplate = "";
-
-    try {
-      prTemplate = await Deno.readTextFile(prTemplatePath);
-      console.log(`Read PR template from ${prTemplatePath}`);
-      return prTemplate;
-    } catch (error) {
-      // If that fails, try to read from .github/PULL_REQUEST_TEMPLATE folder
-      try {
-        const prTemplateDirPath = ".github/PULL_REQUEST_TEMPLATE";
-        const files = [...Deno.readDirSync(prTemplateDirPath)].filter((file) =>
-          file.isFile &&
-          (file.name.endsWith(".md") || file.name.endsWith(".txt"))
-        );
-
-        if (files.length > 0) {
-          // Use the first template file found
-          prTemplate = await Deno.readTextFile(
-            `${prTemplateDirPath}/${files[0].name}`,
-          );
-          console.log(
-            `Read PR template from ${prTemplateDirPath}/${files[0].name}`,
-          );
-          return prTemplate;
-        }
-      } catch (nestedError) {
-        // Both attempts failed
-        console.log("Could not find PR template in .github directory");
-        return "";
-      }
-    }
-  } catch (error) {
-    console.error("Error reading PR template:", error);
-    return "";
-  }
-
-  return "";
-};
-
-const textDecoder = new TextDecoder();
-const textEncoder = new TextEncoder();
-const getLatestCommitMessage = async () => {
-  try {
-    const process = new Deno.Command("git", {
-      args: ["log", "-1", "--pretty=%B"],
-      stdout: "piped",
-      stderr: "piped",
-    });
-
-    const output = await process.output();
-    const result = textDecoder.decode(output.stdout).trim();
-
-    return result;
-  } catch (error) {
-    console.error("Error reading latest commit message:", error);
-    return "";
-  }
-};
-
-const getDiffSummary = async () => {
-  try {
-    // Get the diff between HEAD and the previous commit to show the latest changes
-    const process = new Deno.Command("git", {
-      args: ["diff", "HEAD^", "HEAD", "--stat"],
-      stdout: "piped",
-      stderr: "piped",
-    });
-
-    const output = await process.output();
-    const diffSummary = new TextDecoder().decode(output.stdout).trim();
-    console.log("Latest diff summary:", diffSummary);
-
-    return diffSummary;
-  } catch (error) {
-    console.error("Error getting diff summary:", error);
-    return "";
-  }
-};
-
-const readLastCommit = async () => {
-  try {
-    const message = await getLatestCommitMessage();
-    const diffSummary = await getDiffSummary();
-    console.log("message summary", { message, diffSummary });
-
-    // Get the actual code changes from the last commit
-    const process = new Deno.Command("git", {
-      args: ["show", "--pretty=format:", "--patch"],
-      stdout: "piped",
-      stderr: "piped",
-    });
-
-    const output = await process.output();
-    const codeChanges = new TextDecoder().decode(output.stdout).trim();
-
-    const commit = `
-Commit Message:
-${message}
-
-Changes:
-${diffSummary}
-
-Code Changes:
-${codeChanges}
-    `.trim();
-    return commit;
-  } catch (error) {
-    console.error("Error reading last commit:", error);
-    return "";
-  }
-};
 
 main();
