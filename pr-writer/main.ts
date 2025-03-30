@@ -1,17 +1,22 @@
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { parseArgs } from "jsr:@std/cli/parse-args";
 import { readLastCommit, readPrTemplate } from "./utils.ts";
-// import { writeFile } from "node:fs/promises";
 
 const args = parseArgs(Deno.args);
 console.log("args", args);
 
-const anthropic = new Anthropic();
+let anthropic = new Anthropic();
 const textEncoder = new TextEncoder();
 
-// Read PR template from .github directory
+// Helper to mock anthropic in tests
+export function _mockAnthropic(mockClient: unknown) {
+  const original = anthropic;
+  anthropic = mockClient as typeof anthropic;
+  return original;
+}
 
-async function main() {
+// Export for testing
+export async function main() {
   const template = await readPrTemplate();
   const msg = await anthropic.messages.create({
     model: "claude-3-7-sonnet-20250219",
@@ -41,8 +46,6 @@ async function main() {
 
   const block = msg.content[0];
   if (block.type === "text") {
-    console.log(block.text);
-
     // Check if EDITOR environment variable is set
     const editor = Deno.env.get("EDITOR");
 

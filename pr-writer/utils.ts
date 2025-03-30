@@ -31,12 +31,17 @@ export const readPrTemplate = async () => {
         }
       } catch (nestedError) {
         // Both attempts failed
-        console.log("Could not find PR template in .github directory");
+        console.log(
+          "Could not find PR template in .github directory. Use Deafult Template instead.",
+        );
         return "";
       }
     }
   } catch (error) {
-    console.error("Error reading PR template:", error);
+    console.error(
+      "Error reading PR template. Fallback to Default Template. Error:",
+      error,
+    );
     return DEFAULT_PR_TEMPLATE;
   }
 
