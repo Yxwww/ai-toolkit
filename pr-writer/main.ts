@@ -38,7 +38,7 @@ export async function main() {
               `Please write a pull request description based on the commit using the pull request template.
 
               Here is the last commit:
-              ${}
+              ${lastCommit}
               Here is the template:
               ${template}
             `,
