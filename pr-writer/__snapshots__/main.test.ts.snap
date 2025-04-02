@@ -1,0 +1,143 @@
+export const snapshot = {};
+
+snapshot[`Command should call git 3 times to get the diff and open edit on the tempFile 1`] = `
+[
+  {
+    args: [
+      "git",
+      {
+        args: [
+          "log",
+          "-1",
+          "--pretty=%B",
+        ],
+        stderr: "piped",
+        stdout: "piped",
+      },
+    ],
+    returned: {
+      output: [Function: output],
+    },
+    self: stub {},
+  },
+  {
+    args: [
+      "git",
+      {
+        args: [
+          "diff",
+          "HEAD^",
+          "HEAD",
+          "--stat",
+        ],
+        stderr: "piped",
+        stdout: "piped",
+      },
+    ],
+    returned: {
+      output: [Function: output],
+    },
+    self: stub {},
+  },
+  {
+    args: [
+      "git",
+      {
+        args: [
+          "show",
+          "--pretty=format:",
+          "--patch",
+        ],
+        stderr: "piped",
+        stdout: "piped",
+      },
+    ],
+    returned: {
+      output: [Function: output],
+    },
+    self: stub {},
+  },
+  {
+    args: [
+      "nvim",
+      {
+        args: [
+          "tempfile",
+        ],
+        stderr: "inherit",
+        stdin: "inherit",
+        stdout: "inherit",
+      },
+    ],
+    returned: {
+      output: [Function: output],
+    },
+    self: stub {},
+  },
+]
+`;
+
+snapshot[`Should call anthropic api with diff and message 1`] = `
+<ref *1> [
+  {
+    args: [
+      {
+        max_tokens: 1000,
+        messages: [
+          {
+            content: [
+              {
+                text: "Please write a pull request description based on the commit using the pull request template.
+
+              Here is the last commit:
+              Commit Message:
+feat: add new feature
+
+Changes:
+feat: add new feature
+
+Code Changes:
+feat: add new feature
+              Here is the template:
+              ## Mock PR Template
+            ",
+                type: "text",
+              },
+            ],
+            role: "user",
+          },
+        ],
+        model: "claude-3-7-sonnet-20250219",
+        system: "Responds with concisely written pull request descriptions following the template",
+        temperature: 1,
+      },
+    ],
+    returned: Promise {
+      {
+        content: [
+          {
+            text: "## PR Description
+Implemented awesome feature
+
+## Changes Made
+- Added new component
+- Updated documentation
+
+## Testing
+Manual testing completed",
+            type: "text",
+          },
+        ],
+      },
+    },
+    self: {
+      create: [Function: spy] {
+        calls: [Circular *1],
+        original: [Function (anonymous)],
+        restore: [Function: value],
+        restored: [Getter],
+      },
+    },
+  },
+]
+`;

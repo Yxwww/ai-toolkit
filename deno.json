@@ -3,7 +3,8 @@
     "dev": "deno run --watch main.ts",
     "build": "deno compile --allow-net --allow-write  --allow-env --allow-read --allow-run  --output pr-writer/dist/pr-writer pr-writer/main.ts",
     "run": "deno run --allow-net --allow-write  --allow-env --allow-read --allow-run  pr-writer/main.ts",
-    "install-global": "deno install --global --allow-read --allow-write --allow-run --allow-env --allow-net --name=pr-writer ./pr-writer/main.ts"
+    "install-global": "deno install --global --allow-read --allow-write --allow-run --allow-env --allow-net --name=pr-writer ./pr-writer/main.ts",
+    "test": "test=true deno test --allow-env --allow-read --allow-write"
   },
   "imports": {
     "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.39.0",

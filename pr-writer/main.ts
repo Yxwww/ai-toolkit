@@ -2,24 +2,38 @@ import Anthropic from "npm:@anthropic-ai/sdk";
 import { parseArgs } from "jsr:@std/cli/parse-args";
 import { readLastCommit, readPrTemplate } from "./utils.ts";
 
-const args = parseArgs(Deno.args);
-console.log("args", args);
-
-let anthropic = new Anthropic();
-const textEncoder = new TextEncoder();
-
 // Helper to mock anthropic in tests
-export function _mockAnthropic(mockClient: unknown) {
-  const original = anthropic;
-  anthropic = mockClient as typeof anthropic;
-  return original;
-}
+const {
+  getAnthropic,
+  _mockAnthropic,
+} = (() => {
+  let anthropic: Anthropic;
+  return {
+    getAnthropic: () => {
+      if (anthropic) return anthropic;
+      anthropic = new Anthropic();
+      return anthropic;
+    },
+    _mockAnthropic: (mockClient: unknown) => {
+      const original = anthropic;
+      anthropic = mockClient as typeof anthropic;
+      return original;
+    },
+  };
+})();
 
+const isTestMode = Deno.env.get("test") === "true";
 // Export for testing
 export async function main() {
+  const args = parseArgs(Deno.args);
+  console.log("args", args);
+
+  const anthropic = getAnthropic();
+  const textEncoder = new TextEncoder();
+
   const template = await readPrTemplate();
   const lastCommit = await readLastCommit();
-  if (lastCommit.length > 2000) {
+  if (lastCommit.length > 10000) {
     throw new Error("Commit message is too long");
   }
   const msg = await anthropic.messages.create({
@@ -38,7 +52,7 @@ export async function main() {
               `Please write a pull request description based on the commit using the pull request template.
 
               Here is the last commit:
-              ${}
+              ${lastCommit}
               Here is the template:
               ${template}
             `,
@@ -86,4 +100,7 @@ export async function main() {
   }
 }
 
-main();
+export { _mockAnthropic };
+if (!isTestMode) {
+  main();
+}

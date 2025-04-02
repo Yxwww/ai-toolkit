@@ -5,7 +5,6 @@ export const readPrTemplate = async () => {
     // First try to read from .github/pull_request_template.md
     const prTemplatePath = ".github/pull_request_template.md";
     let prTemplate = "";
-
     try {
       prTemplate = await Deno.readTextFile(prTemplatePath);
       console.log(`Read PR template from ${prTemplatePath}`);
@@ -34,7 +33,7 @@ export const readPrTemplate = async () => {
         console.log(
           "Could not find PR template in .github directory. Use Deafult Template instead.",
         );
-        return "";
+        return prTemplate;
       }
     }
   } catch (error) {
@@ -60,7 +59,7 @@ export const readLastCommit = async () => {
     });
 
     const output = await process.output();
-    const codeChanges = new TextDecoder().decode(output.stdout).trim();
+    const codeChanges = textDecoder.decode(output.stdout).trim();
 
     const commit = `
 Commit Message:
